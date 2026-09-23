@@ -11,7 +11,8 @@ The same `.pbiviz` works in Power BI Desktop, the Power BI Service and Fabric.
 | No constituency labels | On-map labels from `PCON24NM`, placed inside each polygon. Fonts are bundled. |
 | No zoom-to-selection | Reframes to the filtered stations, the search circle and the clicked constituency. |
 | No roadless base map | Default base map is blank (no roads). Online styles strip road layers when **Hide roads** is on. |
-| Reference layer not interactive | Clicking a polygon filters the report to that constituency. |
+| Reference layer not interactive | Constituencies and rail lines highlight on hover, show a tooltip, and filter the report when clicked. |
+| — | Mainline vs non-mainline: separate line styles, station colouring/filtering, legend, and an on-map layer switcher. |
 
 ## Quick start
 
@@ -37,6 +38,7 @@ npm run package && npm run test:render   # headless Chromium render test in a Po
 | **Latitude / Longitude** | `Parliament_MPs[Latitude]` / `[Longitude]` | WGS84 decimal degrees. Set to *Don't summarize* where possible. Rows with projected coordinates (BNG) are skipped and counted in a notice. |
 | **Station Facility Owner (colour)** | `Station_Facility_Owner` | Sets the bubble colour and the legend. |
 | **Constituency** | `Constituency` | Values must match `PCON24NM` in the GeoJSON. This field is what makes polygon clicks filter the report. |
+| **Mainline** | `Mainline` | A line name, or Yes/No. Colours and filters mainline vs non-mainline stations (*Stations* card). If it holds line names that match the rail GeoJSON's line names, clicking a line filters the report to that line. |
 | **Tooltip details** | `CRS`, `MP_Name`, `Mainline`, `District`, `County` | Grouping columns, shown in the station tooltip in the order you add them. |
 | **In radius flag** | `[In_Radius]` | Stations where it is 0, blank or false are hidden (*Stations → Hide stations outside radius*). |
 | **Radius centre lat / lon, Radius (miles)** | `[Sel_Lat]`, `[Sel_Lon]`, `[Radius_mi Value]` | Optional. Draws the search circle and includes it in the zoom. |
@@ -54,11 +56,37 @@ selection table the current DAX uses. If it filtered the same Station column thi
 
 - **Hover a station**: Power BI tooltip with the bound fields and no coordinates. Report-page (canvas) tooltips are declared in capabilities but not yet tested.
 - **Click a station**: cross-filters or cross-highlights other visuals. Ctrl/Shift+click adds stations to the selection. Unselected stations are dimmed.
+- **Hover a constituency**: it lights up, and a tooltip shows the name, Party/MP (from the GeoJSON, or from `MP_Name` in *Tooltip details*),
+  the number of stations shown and how many of those are mainline stations.
 - **Click a constituency**: applies a basic filter on the bound Constituency column (`In [name]`) and outlines the polygon.
   Click it again, or click outside all polygons, to clear the filter. If no Constituency field is bound, the click only zooms to the polygon.
+- **Hover a rail line**: it lights up, and a tooltip shows the line name, whether it is a mainline or a non-mainline (branch) line,
+  and how many of the shown stations are on it.
+- **Click a rail line**: filters the report on the bound Mainline column to that line (outlined in yellow). Click it again to clear.
+  If no Mainline field is bound, the click zooms to the line.
+- **Layer switcher** (bottom-left): tick boxes for constituencies, constituency names, mainlines, non-mainline lines and stations.
+  They are the same settings as the format pane, and are saved with the report.
 - **Right-click**: Power BI context menu (drill through, etc.).
 - **Other visuals highlighting this one**: stations that aren't highlighted are dimmed.
 - **Zoom**: when the set of visible stations, the search radius or the constituency filter changes, the map reframes to it (*Zoom → Zoom to filtered data*).
+
+## Whole-UK map: getting the data in
+
+The visual draws whatever GeoJSON is bundled, so going UK-wide means bundling UK-wide layers:
+
+1. **Constituency boundaries**: ONS Open Geography Portal → *Westminster Parliamentary Constituencies (July 2024) Boundaries UK BUC*
+   (the ultra-generalised file, ~650 polygons, a few MB). Download it as GeoJSON. It has `PCON24NM`.
+2. **Party / MP per constituency**: a CSV with `Constituency,Party,MP` columns (e.g. exported from the existing `Parliament_MPs` table).
+   The script colours each constituency by party (usual UK party colours, or a `Colour` column if you add one).
+3. **Rail lines**: the existing pipeline's mainline and branch line layers for GB. Pass them as separate files with `--line-class`
+   if they don't already carry a mainline/branch property.
+
+```bash
+npm run prepare-geojson -- PCON_JULY_2024_UK_BUC.geojson \
+  --parties parliament_mps.csv \
+  --line-class mainline gb_mainlines.geojson --line-class branch gb_branches.geojson
+npm run package
+```
 
 ## Constituency / rail GeoJSON (bundled)
 

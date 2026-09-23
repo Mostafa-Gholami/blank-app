@@ -31,6 +31,12 @@
       "description": "Constituency name. Values must match the GeoJSON name property (PCON24NM) so clicking a polygon filters the report."
     },
     {
+      "name": "mainline",
+      "kind": "Grouping",
+      "displayName": "Mainline",
+      "description": "The station's Mainline column (a line name, or Yes/No). Used to style mainline vs non-mainline stations. If it holds line names that match the rail GeoJSON, clicking a line filters the report to that line."
+    },
+    {
       "name": "details",
       "kind": "Grouping",
       "displayName": "Tooltip details",
@@ -97,6 +103,9 @@
           },
           "radiusMiles": {
             "max": 1
+          },
+          "mainline": {
+            "max": 1
           }
         }
       ],
@@ -126,6 +135,11 @@
             {
               "bind": {
                 "to": "constituency"
+              }
+            },
+            {
+              "bind": {
+                "to": "mainline"
               }
             },
             {
@@ -291,6 +305,11 @@
           "type": {
             "text": true
           }
+        },
+        "hoverHighlight": {
+          "type": {
+            "bool": true
+          }
         }
       }
     },
@@ -370,6 +389,26 @@
           "type": {
             "bool": true
           }
+        },
+        "showMainlines": {
+          "type": {
+            "bool": true
+          }
+        },
+        "showBranches": {
+          "type": {
+            "bool": true
+          }
+        },
+        "nameProperty": {
+          "type": {
+            "text": true
+          }
+        },
+        "hoverHighlight": {
+          "type": {
+            "bool": true
+          }
         }
       }
     },
@@ -431,6 +470,56 @@
         "labelMinZoom": {
           "type": {
             "numeric": true
+          }
+        },
+        "colourBy": {
+          "type": {
+            "enumeration": [
+              {
+                "value": "sfo",
+                "displayName": "Station Facility Owner"
+              },
+              {
+                "value": "mainline",
+                "displayName": "Mainline / non-mainline"
+              }
+            ]
+          }
+        },
+        "mainlineStationColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "nonMainlineStationColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "stationFilter": {
+          "type": {
+            "enumeration": [
+              {
+                "value": "all",
+                "displayName": "All stations"
+              },
+              {
+                "value": "mainline",
+                "displayName": "Mainline stations only"
+              },
+              {
+                "value": "nonMainline",
+                "displayName": "Non-mainline stations only"
+              }
+            ]
           }
         }
       }
@@ -504,6 +593,15 @@
         "fillOpacity": {
           "type": {
             "numeric": true
+          }
+        }
+      }
+    },
+    "layerPanel": {
+      "properties": {
+        "show": {
+          "type": {
+            "bool": true
           }
         }
       }

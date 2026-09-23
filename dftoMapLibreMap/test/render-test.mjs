@@ -68,7 +68,7 @@ window.__host = {
     };
   },
   applyJsonFilter(filter, obj, prop, action) { __log.filters.push({ filter, action }); },
-  persistProperties() {},
+  persistProperties(changes) { (__log.persisted ||= []).push(changes); },
   locale: "en-GB"
 };
 `;
@@ -116,7 +116,9 @@ function dataView({ radius = null, objects = {} } = {}) {
     const sfo = { source: col("Station Facility Owner", "facilityOwner", "Parliament_MPs.Station_Facility_Owner"), values: rows.map(r => r[4]) };
     const pcon = { source: col("Constituency", "constituency", "Parliament_MPs.Constituency"), values: rows.map(r => constituencyOf(r[2], r[3])) };
     const crs = { source: col("CRS", "details", "Parliament_MPs.CRS"), values: rows.map(r => r[1]) };
-    const categories = [station, lat, lon, sfo, pcon, crs];
+    const mp = { source: col("MP_Name", "details", "Parliament_MPs.MP_Name"), values: rows.map(r => "MP for " + constituencyOf(r[2], r[3])) };
+    const mainline = { source: col("Mainline", "mainline", "Parliament_MPs.Mainline"), values: rows.map(r => r[5]) };
+    const categories = [station, lat, lon, sfo, pcon, mainline, crs, mp];
     const values = [];
     if (radius) {
         const flag = rows.map(r => haversineMiles(radius.lat, radius.lon, r[2], r[3]) <= radius.miles ? 1 : 0);
@@ -182,7 +184,7 @@ await shot("1-reference-layers");
 await update(dataView());
 check(await sourceCount("dfto-stations") === STATIONS.length - 1, "all valid stations drawn; projected (BNG) row skipped");
 check((await frame.evaluate(() => document.querySelector(".dfto-notice").textContent)).includes("1 station(s) skipped"), "invalid-coordinate notice shown");
-check(await frame.evaluate(() => document.querySelectorAll(".dfto-legend-row").length) === 4, "SFO legend lists 4 owners");
+check(await frame.evaluate(() => document.querySelector(".dfto-legend-section").querySelectorAll(".dfto-legend-row").length) === 4, "SFO legend lists 4 owners");
 await shot("2-stations");
 
 // 3. Radial search: 6 miles around Birmingham New Street.
@@ -220,11 +222,66 @@ const empty = await project(-1.35, 52.44);
 await page.mouse.click(empty.x, empty.y);
 await page.waitForTimeout(300);
 const filter = await frame.evaluate(() => window.__log.filters.pop());
-check(!!filter && filter.filter?.values?.[0] === "Sample South East" && filter.filter.target.column === "Constituency", "clicking a polygon applies a constituency filter");
-await update(dataView(), { jsonFilters: [filter.filter] });
+const pconFilter = [].concat(filter?.filter ?? [])[0];
+check(!!pconFilter && pconFilter.values?.[0] === "Sample South East" && pconFilter.target.column === "Constituency", "clicking a polygon applies a constituency filter");
+await update(dataView(), { jsonFilters: [pconFilter] });
 const selectedOutline = await frame.evaluate(() => JSON.stringify(window.__visual.map.getFilter("dfto-constituency-selected")));
 check(selectedOutline.includes("Sample South East"), "filtered constituency outlined");
 await shot("5-constituency-filter");
+
+// 6b. Constituency hover: tooltip with name + MP from the report data, and a hover highlight.
+await update(dataView());
+await page.mouse.move(0, 0);
+const pconPoint = await project(-1.95, 52.68);
+await page.mouse.move(pconPoint.x, pconPoint.y);
+await page.waitForTimeout(250);
+const pconTip = await frame.evaluate(() => window.__log.tooltip.filter(t => t.type === "show").pop());
+check(!!pconTip && pconTip.items[0].displayName === "Constituency" && pconTip.items[0].value === "Sample North West", "hovering a constituency shows its name");
+check(!!pconTip && pconTip.items.some(i => i.displayName === "MP_Name" && i.value === "MP for Sample North West"), "constituency tooltip includes the MP from report data");
+check(!!pconTip && pconTip.items.some(i => i.displayName === "Stations shown") && pconTip.items.some(i => i.displayName === "Mainline stations"), "constituency tooltip counts stations and mainline stations");
+check(JSON.stringify(await frame.evaluate(() => window.__visual.map.getFilter("dfto-constituency-hover"))).includes("Sample North West"), "hovered constituency highlighted");
+await shot("5b-constituency-hover");
+
+// 6c. Rail lines: hover tooltip + highlight, click filters the report on the Mainline column.
+const onMain = await project(-1.775, 52.475);
+await page.mouse.move(onMain.x, onMain.y + 2);
+await page.waitForTimeout(250);
+const lineTip = await frame.evaluate(() => window.__log.tooltip.filter(t => t.type === "show").pop());
+check(!!lineTip && lineTip.items.some(i => i.displayName === "Line" && i.value === "Sample Main Line") && lineTip.items.some(i => i.value === "Mainline"), "hovering a mainline shows its name and type");
+check(!!lineTip && lineTip.items.some(i => i.displayName === "Stations shown on this line"), "line tooltip counts the line's stations");
+check(JSON.stringify(await frame.evaluate(() => window.__visual.map.getFilter("dfto-rail-hover"))).includes("Sample Main Line"), "hovered line highlighted");
+await shot("5c-line-hover");
+await page.mouse.click(onMain.x, onMain.y + 2);
+await page.waitForTimeout(300);
+const lineFilter = [].concat((await frame.evaluate(() => window.__log.filters.pop()))?.filter ?? [])[0];
+check(!!lineFilter && lineFilter.target.column === "Mainline" && lineFilter.values[0] === "Sample Main Line", "clicking a line filters the report to that line");
+await update(dataView(), { jsonFilters: [lineFilter] });
+check(JSON.stringify(await frame.evaluate(() => window.__visual.map.getFilter("dfto-rail-selected"))).includes("Sample Main Line"), "filtered line highlighted");
+await shot("5d-line-filter");
+const branchPoint = await project(-1.8, 52.66);
+await page.mouse.move(branchPoint.x + 1, branchPoint.y);
+await page.waitForTimeout(250);
+const branchTip = await frame.evaluate(() => window.__log.tooltip.filter(t => t.type === "show").pop());
+check(!!branchTip && branchTip.items.some(i => i.value === "Non-mainline (branch)"), "hovering a branch line shows it is non-mainline");
+
+// 6d. Mainline / non-mainline station styling and filtering.
+await update(dataView({ objects: { stations: { colourBy: "mainline", stationFilter: "mainline" } } }));
+const mainStations = (await sourceData("dfto-stations")).features;
+const expectedMain = STATIONS.filter(r => Math.abs(r[2]) <= 90 && r[5] !== "No").length;
+check(mainStations.length === expectedMain, `"Mainline stations only" shows ${expectedMain} stations`);
+check(mainStations.every(f => f.properties.colour === "#1F3A5F"), "stations coloured as mainline");
+const legendText = await frame.evaluate(() => document.querySelector(".dfto-legend").textContent);
+check(legendText.includes("Mainline station") && legendText.includes("Non-mainline (branch)"), "legend explains station colours and line types");
+await shot("5e-mainline-stations");
+
+// 6e. On-map layer switcher toggles layers and persists the choice.
+await update(dataView());
+const toggled = await frame.evaluate(() => {
+    const box = [...document.querySelectorAll(".dfto-layer-item")].find(l => l.textContent === "Non-mainline lines").querySelector("input");
+    box.click();
+    return window.__visual.map.getLayoutProperty("dfto-rail-branch", "visibility");
+});
+check(toggled === "none", "layer switcher hides non-mainline lines");
 
 // 7. Formatting: remote base map unreachable here → falls back to offline style, overlay intact.
 await update(dataView({ objects: { baseMap: { style: "positron" }, railLines: { dashBranches: true }, constituencyLabels: { fontSize: 14 } } }));
@@ -235,7 +292,7 @@ const online = await frame.evaluate(() => window.__visual.map.getStyle().sources
 check(online || notice.includes("Base map unavailable"), online ? "remote base map loaded" : "blocked base map falls back to offline map with notice");
 check(await sourceCount("dfto-stations") === STATIONS.length - 1, "overlay intact after base-map switch");
 check(JSON.stringify(await frame.evaluate(() => window.__visual.map.getPaintProperty("dfto-rail-branch", "line-dasharray"))) === "[3,2]", "format pane: dashed branch lines applied");
-check(await frame.evaluate(() => window.__visual.map.getLayoutProperty("dfto-constituency-label", "text-size")) === 14, "format pane: label size applied");
+check(JSON.stringify(await frame.evaluate(() => window.__visual.map.getLayoutProperty("dfto-constituency-label", "text-size"))).includes(",8,14,"), "format pane: label size applied");
 await shot("6-formatting");
 
 check(pageErrors.length === 0, `no uncaught errors${pageErrors.length ? ": " + pageErrors.join(" | ") : ""}`);

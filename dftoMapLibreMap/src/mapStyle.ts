@@ -22,6 +22,9 @@ export const LAYER = {
     constituencyFill: "dfto-constituency-fill",
     constituencyLine: "dfto-constituency-line",
     constituencySelected: "dfto-constituency-selected",
+    constituencyHover: "dfto-constituency-hover",
+    lineHover: "dfto-rail-hover",
+    lineSelected: "dfto-rail-selected",
     branch: "dfto-rail-branch",
     mainline: "dfto-rail-mainline",
     radiusFill: "dfto-radius-fill",
@@ -107,7 +110,22 @@ export function isBaseLabelLayer(layer: LayerSpecification): boolean {
 
 export interface OverlayState {
     selectedConstituency: string | null;
+    selectedLine: string | null;
+    hoveredConstituency: string | null;
+    hoveredLine: string | null;
     hasDimmed: boolean;
+}
+
+const NONE = "\u0000";
+
+/** Filters for the hover / selection highlight layers; also pushed on their own when only the hover changes. */
+export function highlightFilters(state: OverlayState): Record<string, FilterSpecification> {
+    return {
+        [LAYER.constituencyHover]: ["==", ["get", "__name"], state.hoveredConstituency ?? NONE],
+        [LAYER.constituencySelected]: ["==", ["get", "__name"], state.selectedConstituency ?? NONE],
+        [LAYER.lineHover]: ["==", ["get", "__name"], state.hoveredLine ?? NONE],
+        [LAYER.lineSelected]: ["==", ["get", "__name"], state.selectedLine ?? NONE]
+    };
 }
 
 /**
@@ -120,18 +138,27 @@ export function overlayLayers(s: VisualFormattingSettingsModel, state: OverlaySt
     const fallback = c.defaultColour.value.value;
     const fillColour = c.useGeoJsonColours.value ? ["coalesce", ["get", "__fill"], fallback] : fallback;
     const strokeColour = c.useGeoJsonColours.value ? ["coalesce", ["get", "__stroke"], fallback] : fallback;
-    const selectedFilter: FilterSpecification = ["==", ["get", "__name"], state.selectedConstituency ?? "\u0000"];
+    const filters = highlightFilters(state);
     const rail = s.railLines;
+    const showMain = rail.show.value && rail.showMainlines.value;
+    const showBranch = rail.show.value && rail.showBranches.value;
     const st = s.stations;
     const opacity = st.opacity.value / 100;
     const lbl = s.constituencyLabels;
     const radius = s.radiusCircle;
+    const fillOpacity = c.fillOpacity.value / 100;
+    const lineWidth = ["match", ["get", "__class"], "mainline", rail.mainlineWidth.value, rail.branchWidth.value];
 
     return [
         {
             id: LAYER.constituencyFill, type: "fill", source: SRC.polygons,
             layout: { visibility: vis(c.show.value) },
-            paint: { "fill-color": fillColour as never, "fill-opacity": c.fillOpacity.value / 100 }
+            paint: { "fill-color": fillColour as never, "fill-opacity": fillOpacity }
+        },
+        {
+            id: LAYER.constituencyHover, type: "fill", source: SRC.polygons, filter: filters[LAYER.constituencyHover],
+            layout: { visibility: vis(c.show.value && c.hoverHighlight.value) },
+            paint: { "fill-color": fillColour as never, "fill-opacity": Math.min(1, fillOpacity + 0.3) }
         },
         {
             id: LAYER.constituencyLine, type: "line", source: SRC.polygons,
@@ -139,13 +166,23 @@ export function overlayLayers(s: VisualFormattingSettingsModel, state: OverlaySt
             paint: { "line-color": strokeColour as never, "line-width": c.strokeWidth.value, "line-opacity": c.strokeOpacity.value / 100 }
         },
         {
-            id: LAYER.constituencySelected, type: "line", source: SRC.polygons, filter: selectedFilter,
+            id: LAYER.constituencySelected, type: "line", source: SRC.polygons, filter: filters[LAYER.constituencySelected],
             layout: { visibility: vis(c.show.value), "line-join": "round" },
             paint: { "line-color": strokeColour as never, "line-width": Math.max(3, c.strokeWidth.value * 3) }
         },
         {
-            id: LAYER.branch, type: "line", source: SRC.lines, filter: ["==", ["get", "__class"], "branch"],
+            id: LAYER.lineSelected, type: "line", source: SRC.lines, filter: filters[LAYER.lineSelected],
             layout: { visibility: vis(rail.show.value), "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#FFD400", "line-width": ["+", lineWidth, 8] as never, "line-opacity": 0.85 }
+        },
+        {
+            id: LAYER.lineHover, type: "line", source: SRC.lines, filter: filters[LAYER.lineHover],
+            layout: { visibility: vis(rail.show.value && rail.hoverHighlight.value), "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#00A3FF", "line-width": ["+", lineWidth, 6] as never, "line-opacity": 0.55 }
+        },
+        {
+            id: LAYER.branch, type: "line", source: SRC.lines, filter: ["==", ["get", "__class"], "branch"],
+            layout: { visibility: vis(showBranch), "line-cap": "round", "line-join": "round" },
             paint: {
                 "line-color": rail.branchColour.value.value,
                 "line-width": rail.branchWidth.value,
@@ -154,7 +191,7 @@ export function overlayLayers(s: VisualFormattingSettingsModel, state: OverlaySt
         },
         {
             id: LAYER.mainline, type: "line", source: SRC.lines, filter: ["==", ["get", "__class"], "mainline"],
-            layout: { visibility: vis(rail.show.value), "line-cap": "round", "line-join": "round" },
+            layout: { visibility: vis(showMain), "line-cap": "round", "line-join": "round" },
             paint: { "line-color": rail.mainlineColour.value.value, "line-width": rail.mainlineWidth.value }
         },
         {
@@ -173,11 +210,14 @@ export function overlayLayers(s: VisualFormattingSettingsModel, state: OverlaySt
                 visibility: vis(c.show.value && lbl.show.value),
                 "text-field": ["get", "__name"],
                 "text-font": FONT,
-                "text-size": lbl.fontSize.value,
-                "text-max-width": 8,
-                "text-padding": 2
+                // Grows with zoom so names stay readable nationally and in dense urban areas.
+                "text-size": ["interpolate", ["linear"], ["zoom"], 5, lbl.fontSize.value * 0.8, 8, lbl.fontSize.value, 11, lbl.fontSize.value * 1.4],
+                "text-max-width": 7,
+                "text-padding": 1,
+                // Larger constituencies claim their label space first.
+                "symbol-sort-key": ["-", 0, ["get", "__area"]]
             },
-            paint: { "text-color": lbl.colour.value.value, "text-halo-color": lbl.haloColour.value.value, "text-halo-width": 1.5 }
+            paint: { "text-color": lbl.colour.value.value, "text-halo-color": lbl.haloColour.value.value, "text-halo-width": 1.6 }
         },
         {
             id: LAYER.stations, type: "circle", source: SRC.stations,

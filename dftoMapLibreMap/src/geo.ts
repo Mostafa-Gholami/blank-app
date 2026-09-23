@@ -12,7 +12,11 @@ export interface ReferenceLayers {
     bounds: Bounds | null;
     /** Constituency name -> polygon bounds, for zoom-to-constituency. */
     boundsByName: Map<string, Bounds>;
+    /** Rail line name -> bounds, for zoom-to-line. */
+    boundsByLine: Map<string, Bounds>;
 }
+
+const LINE_NAME_KEYS = ["name", "Name", "NAME", "line_name", "Line_Name", "LineName", "route", "Route", "route_name", "Mainline", "mainline", "ELR", "elr"];
 
 const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
@@ -25,11 +29,12 @@ export function isHexColour(value: unknown): value is string {
  * Adds normalised `__name`, `__fill`, `__stroke` (polygons) and `__class` (lines) properties
  * so the map layers never depend on the raw property names.
  */
-export function buildReferenceLayers(source: FeatureCollection, nameProperty: string): ReferenceLayers {
+export function buildReferenceLayers(source: FeatureCollection, nameProperty: string, lineNameProperty = ""): ReferenceLayers {
     const polygons: Feature<Polygon | MultiPolygon>[] = [];
     const labels: Feature<Point>[] = [];
     const lines: Feature<LineString | MultiLineString>[] = [];
     const boundsByName = new Map<string, Bounds>();
+    const boundsByLine = new Map<string, Bounds>();
     let bounds: Bounds | null = null;
 
     for (const feature of source?.features ?? []) {
@@ -51,13 +56,20 @@ export function buildReferenceLayers(source: FeatureCollection, nameProperty: st
                 }
             });
             if (name) {
-                labels.push({ type: "Feature", geometry: { type: "Point", coordinates: labelPoint(geometry) }, properties: { __name: name } });
+                labels.push({
+                    type: "Feature",
+                    geometry: { type: "Point", coordinates: labelPoint(geometry) },
+                    properties: { __name: name, __area: polygonArea(geometry) }
+                });
                 if (featureBounds) boundsByName.set(name, featureBounds);
             }
             bounds = unionBounds(bounds, featureBounds);
         } else if (geometry.type === "LineString" || geometry.type === "MultiLineString") {
-            lines.push({ type: "Feature", geometry, properties: { ...props, __class: classifyLine(props) } });
-            bounds = unionBounds(bounds, geometryBounds(geometry));
+            const lineName = lineNameOf(props, lineNameProperty);
+            const lineBounds = geometryBounds(geometry);
+            lines.push({ type: "Feature", geometry, properties: { ...props, __class: classifyLine(props), __name: lineName } });
+            if (lineName) boundsByLine.set(lineName, unionBounds(boundsByLine.get(lineName) ?? null, lineBounds));
+            bounds = unionBounds(bounds, lineBounds);
         }
     }
 
@@ -66,8 +78,18 @@ export function buildReferenceLayers(source: FeatureCollection, nameProperty: st
         labels: { type: "FeatureCollection", features: labels },
         lines: { type: "FeatureCollection", features: lines },
         bounds,
-        boundsByName
+        boundsByName,
+        boundsByLine
     };
+}
+
+function lineNameOf(props: Record<string, unknown>, preferred: string): string {
+    const keys = preferred ? [preferred, ...LINE_NAME_KEYS] : LINE_NAME_KEYS;
+    for (const key of keys) {
+        const value = props[key];
+        if (typeof value === "string" && value.trim() && !/^(y|yes|n|no|true|false)$/i.test(value.trim())) return value.trim();
+    }
+    return "";
 }
 
 /**
@@ -92,6 +114,11 @@ function labelPoint(geometry: Polygon | MultiPolygon): Position {
     const rings = geometry.type === "Polygon" ? geometry.coordinates : largestPolygon(geometry.coordinates);
     const [x, y] = polylabel(rings, 0.001);
     return [x, y];
+}
+
+function polygonArea(geometry: Polygon | MultiPolygon): number {
+    const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+    return polygons.reduce((sum, p) => sum + Math.abs(ringArea(p[0] ?? [])), 0);
 }
 
 function largestPolygon(polygons: Position[][][]): Position[][] {

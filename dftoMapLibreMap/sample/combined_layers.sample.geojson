@@ -232,7 +232,7 @@
   {
    "type": "Feature",
    "properties": {
-    "name": "Sample mainline",
+    "name": "Sample Main Line",
     "stroke": "#333333",
     "stroke-width": 3
    },
@@ -261,7 +261,7 @@
   {
    "type": "Feature",
    "properties": {
-    "name": "Sample branch",
+    "name": "Sample Branch Line",
     "stroke": "#8A8F98",
     "stroke-width": 1.4
    },

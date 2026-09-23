@@ -43,6 +43,17 @@ export const BASE_STYLE_ITEMS: powerbi.IEnumMember[] = [
     { value: "custom", displayName: "Custom style URL" }
 ];
 
+const COLOUR_BY: powerbi.IEnumMember[] = [
+    { value: "sfo", displayName: "Station Facility Owner" },
+    { value: "mainline", displayName: "Mainline / non-mainline" }
+];
+
+const STATION_FILTER: powerbi.IEnumMember[] = [
+    { value: "all", displayName: "All stations" },
+    { value: "mainline", displayName: "Mainline stations only" },
+    { value: "nonMainline", displayName: "Non-mainline stations only" }
+];
+
 const LEGEND_POSITIONS: powerbi.IEnumMember[] = [
     { value: "top-left", displayName: "Top left" },
     { value: "top-right", displayName: "Top right" },
@@ -71,12 +82,13 @@ class ConstituencyCard extends Card {
     strokeWidth = num("strokeWidth", "Boundary width", 1.2, 0, 10);
     strokeOpacity = percent("strokeOpacity", "Boundary opacity", 100);
     tooltipProperties = text("tooltipProperties", "Extra tooltip properties", "Party, MP_Name", "Comma-separated GeoJSON property names");
+    hoverHighlight = toggle("hoverHighlight", "Highlight on hover", true);
 
     topLevelSlice = this.show;
     name = "constituencies";
     displayName = "Constituencies";
     slices: Slice[] = [this.nameProperty, this.useGeoJsonColours, this.defaultColour, this.fillOpacity,
-        this.strokeWidth, this.strokeOpacity, this.tooltipProperties];
+        this.strokeWidth, this.strokeOpacity, this.tooltipProperties, this.hoverHighlight];
 }
 
 class ConstituencyLabelCard extends Card {
@@ -84,7 +96,7 @@ class ConstituencyLabelCard extends Card {
     fontSize = num("fontSize", "Text size", 11, 6, 32);
     colour = colour("colour", "Text colour", "#2B2B2B");
     haloColour = colour("haloColour", "Halo colour", "#FFFFFF");
-    minZoom = num("minZoom", "Show from zoom level", 7, 0, 22);
+    minZoom = num("minZoom", "Show from zoom level", 5, 0, 22);
 
     topLevelSlice = this.show;
     name = "constituencyLabels";
@@ -94,22 +106,31 @@ class ConstituencyLabelCard extends Card {
 
 class RailLineCard extends Card {
     show = toggle("show", "Show rail lines", true);
+    showMainlines = toggle("showMainlines", "Show mainlines", true);
+    showBranches = toggle("showBranches", "Show non-mainline (branch) lines", true);
     mainlineColour = colour("mainlineColour", "Mainline colour", "#333333");
     mainlineWidth = num("mainlineWidth", "Mainline width", 3, 0.5, 20);
     branchColour = colour("branchColour", "Branch colour", "#8A8F98");
     branchWidth = num("branchWidth", "Branch width", 1.4, 0.5, 20);
     dashBranches = toggle("dashBranches", "Dashed branch lines", false);
+    nameProperty = text("nameProperty", "Line name property", "", "Auto (name, line_name, route, Mainline…)");
+    hoverHighlight = toggle("hoverHighlight", "Highlight on hover", true);
 
     topLevelSlice = this.show;
     name = "railLines";
     displayName = "Rail lines";
-    slices: Slice[] = [this.mainlineColour, this.mainlineWidth, this.branchColour, this.branchWidth, this.dashBranches];
+    slices: Slice[] = [this.showMainlines, this.showBranches, this.mainlineColour, this.mainlineWidth, this.branchColour,
+        this.branchWidth, this.dashBranches, this.nameProperty, this.hoverHighlight];
 }
 
 class StationCard extends Card {
     show = toggle("show", "Show stations", true);
     radius = num("radius", "Bubble size", 5, 1, 40);
     opacity = percent("opacity", "Opacity", 90);
+    colourBy = new formattingSettings.ItemDropdown({ name: "colourBy", displayName: "Colour stations by", items: COLOUR_BY, value: COLOUR_BY[0] });
+    mainlineStationColour = colour("mainlineStationColour", "Mainline station colour", "#1F3A5F");
+    nonMainlineStationColour = colour("nonMainlineStationColour", "Non-mainline station colour", "#E07A1F");
+    stationFilter = new formattingSettings.ItemDropdown({ name: "stationFilter", displayName: "Show", items: STATION_FILTER, value: STATION_FILTER[0] });
     defaultColour = colour("defaultColour", "Default colour", "#1F6FB2");
     strokeColour = colour("strokeColour", "Outline colour", "#FFFFFF");
     strokeWidth = num("strokeWidth", "Outline width", 1, 0, 10);
@@ -121,7 +142,8 @@ class StationCard extends Card {
     topLevelSlice = this.show;
     name = "stations";
     displayName = "Stations";
-    slices: Slice[] = [this.radius, this.opacity, this.defaultColour, this.strokeColour, this.strokeWidth,
+    slices: Slice[] = [this.stationFilter, this.colourBy, this.mainlineStationColour, this.nonMainlineStationColour,
+        this.radius, this.opacity, this.defaultColour, this.strokeColour, this.strokeWidth,
         this.colourOverrides, this.onlyInRadius, this.showLabels, this.labelMinZoom];
 }
 
@@ -133,6 +155,15 @@ class LegendCard extends Card {
     name = "legend";
     displayName = "Legend";
     slices: Slice[] = [this.position];
+}
+
+class LayerPanelCard extends Card {
+    show = toggle("show", "Show layer switcher on map", true);
+
+    topLevelSlice = this.show;
+    name = "layerPanel";
+    displayName = "Layer switcher";
+    slices: Slice[] = [];
 }
 
 class ZoomCard extends Card {
@@ -163,9 +194,10 @@ export class VisualFormattingSettingsModel extends Model {
     railLines = new RailLineCard();
     stations = new StationCard();
     legend = new LegendCard();
+    layerPanel = new LayerPanelCard();
     zoom = new ZoomCard();
     radiusCircle = new RadiusCard();
 
     cards = [this.baseMap, this.constituencies, this.constituencyLabels, this.railLines,
-        this.stations, this.legend, this.zoom, this.radiusCircle];
+        this.stations, this.legend, this.layerPanel, this.zoom, this.radiusCircle];
 }

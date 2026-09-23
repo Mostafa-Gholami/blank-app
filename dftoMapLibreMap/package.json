@@ -1,7 +1,7 @@
 {
   "name": "dfto-maplibre-map",
   "description": "DFTO TOC Mapping Platform – MapLibre GL custom visual for Power BI",
-  "version": "1.0.0.0",
+  "version": "1.1.0.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/mostafa-gholami/blank-app"

@@ -73,3 +73,53 @@
         text-align: center;
     }
 }
+
+.dfto-map-visual {
+    .dfto-legend-section + .dfto-legend-section {
+        margin-top: 6px;
+    }
+
+    .dfto-legend-line {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 0;
+    }
+
+    .dfto-layer-panel {
+        position: absolute;
+        z-index: 2;
+        left: 8px;
+        bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 8px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        font-size: 11px;
+        color: #252423;
+    }
+
+    .dfto-layer-panel.dfto-panel-top {
+        top: 8px;
+        bottom: auto;
+    }
+
+    .dfto-layer-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        white-space: nowrap;
+
+        input {
+            margin: 0;
+        }
+
+        &.dfto-disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+}

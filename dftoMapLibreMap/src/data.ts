@@ -17,6 +17,10 @@ export interface Station {
     lon: number;
     facilityOwner: string | null;
     constituency: string | null;
+    /** Raw Mainline value (a line name, or Yes/No); null when the Mainline field isn't bound. */
+    mainline: string | null;
+    /** null when the Mainline field isn't bound. */
+    isMainline: boolean | null;
     inRadius: boolean;
     /** null when nothing in the report is cross-highlighting this visual. */
     highlighted: boolean | null;
@@ -37,6 +41,9 @@ export interface ParsedData {
     radius: RadiusSearch | null;
     /** Column the constituency role is bound to; target for the polygon-click filter. */
     constituencyTarget: IFilterColumnTarget | null;
+    /** Column the mainline role is bound to; target for the line-click filter. */
+    mainlineTarget: IFilterColumnTarget | null;
+    hasMainline: boolean;
     invalidCoordinates: number;
 }
 
@@ -46,7 +53,10 @@ interface RoleColumn {
     highlights?: PrimitiveValue[];
 }
 
-const EMPTY: ParsedData = { stations: [], hasInRadius: false, hasHighlights: false, radius: null, constituencyTarget: null, invalidCoordinates: 0 };
+const EMPTY: ParsedData = {
+    stations: [], hasInRadius: false, hasHighlights: false, radius: null,
+    constituencyTarget: null, mainlineTarget: null, hasMainline: false, invalidCoordinates: 0
+};
 
 export function parseDataView(dataView: DataView | undefined, host: IVisualHost): ParsedData {
     const categorical = dataView?.categorical;
@@ -63,12 +73,15 @@ export function parseDataView(dataView: DataView | undefined, host: IVisualHost)
 
     const lat = first("latitude");
     const lon = first("longitude");
-    if (!lat || !lon) return { ...EMPTY, constituencyTarget: columnTarget(first("constituency")?.source) };
+    if (!lat || !lon) {
+        return { ...EMPTY, constituencyTarget: columnTarget(first("constituency")?.source), mainlineTarget: columnTarget(first("mainline")?.source) };
+    }
 
     const owner = first("facilityOwner");
     const constituency = first("constituency");
     const inRadius = first("inRadius");
-    const tooltipColumns = [owner, constituency, ...byRole("details"), ...byRole("tooltips")].filter(Boolean) as RoleColumn[];
+    const mainline = first("mainline");
+    const tooltipColumns = [owner, constituency, mainline, ...byRole("details"), ...byRole("tooltips")].filter(Boolean) as RoleColumn[];
     const highlightColumn = columns.find(c => c.highlights);
 
     const stations: Station[] = [];
@@ -95,6 +108,8 @@ export function parseDataView(dataView: DataView | undefined, host: IVisualHost)
             lon: longitude,
             facilityOwner: owner ? nullableText(owner.values[i]) : null,
             constituency: constituency ? nullableText(constituency.values[i]) : null,
+            mainline: mainline ? nullableText(mainline.values[i]) : null,
+            isMainline: mainline ? isMainlineValue(mainline.values[i]) : null,
             inRadius: inRadius ? isTruthy(inRadius.values[i]) : true,
             highlighted: highlightColumn ? highlightColumn.highlights[i] !== null && highlightColumn.highlights[i] !== undefined : null,
             selectionId: host.createSelectionIdBuilder().withCategory(stationCategory, i).createSelectionId(),
@@ -108,6 +123,8 @@ export function parseDataView(dataView: DataView | undefined, host: IVisualHost)
         hasHighlights: !!highlightColumn,
         radius: readRadius(first("radiusLat"), first("radiusLon"), first("radiusMiles")),
         constituencyTarget: columnTarget(constituency?.source),
+        mainlineTarget: columnTarget(mainline?.source),
+        hasMainline: !!mainline,
         invalidCoordinates
     };
 }
@@ -151,6 +168,15 @@ function isTruthy(value: PrimitiveValue): boolean {
     if (typeof value === "number") return value !== 0 && Number.isFinite(value);
     if (typeof value === "string") return /^(1|true|yes|y)$/i.test(value.trim());
     return false;
+}
+
+/** "Yes", "Y", 1, true or a line name → mainline; blank, "No", 0, "Branch", "Non-mainline" → not. */
+export function isMainlineValue(value: PrimitiveValue): boolean {
+    if (value === null || value === undefined) return false;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    const text = String(value).trim();
+    return text !== "" && !/^(no|n|false|0|none|branch|non[- _]?main\s*line|not mainline|-)$/i.test(text);
 }
 
 function nullableText(value: PrimitiveValue): string | null {
