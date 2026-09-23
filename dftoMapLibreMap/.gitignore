@@ -1,0 +1,6 @@
+node_modules/
+.tmp/
+dist/
+test/output/
+webpack.statistics.*.html
+*.log

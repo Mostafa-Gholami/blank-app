@@ -1,0 +1,26 @@
+{
+  "visual": {
+    "name": "dftoMapLibreMap",
+    "displayName": "DFTO Rail Map (MapLibre)",
+    "guid": "dftoMapLibreMap647FF215534B47FF989214713CF01387",
+    "visualClassName": "Visual",
+    "version": "1.0.0.0",
+    "description": "Constituency, rail line and station map built on MapLibre GL. Token-free, no per-load cost; runs offline with the bundled GeoJSON.",
+    "supportUrl": "https://github.com/mostafa-gholami/blank-app",
+    "gitHubUrl": "https://github.com/mostafa-gholami/blank-app"
+  },
+  "apiVersion": "5.11.1",
+  "author": {
+    "name": "Fishbone Solutions",
+    "email": "gholami.mo69@gmail.com"
+  },
+  "assets": {
+    "icon": "assets/icon.png"
+  },
+  "externalJS": null,
+  "style": "style/visual.less",
+  "capabilities": "capabilities.json",
+  "dependencies": null,
+  "stringResources": [],
+  "version": "1.0.0.0"
+}

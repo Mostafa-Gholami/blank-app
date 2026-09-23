@@ -1,0 +1,535 @@
+{
+  "dataRoles": [
+    {
+      "name": "station",
+      "kind": "Grouping",
+      "displayName": "Station",
+      "description": "Station name or CRS. One row per station; used as the cross-filter key."
+    },
+    {
+      "name": "latitude",
+      "kind": "GroupingOrMeasure",
+      "displayName": "Latitude",
+      "description": "WGS84 latitude (decimal degrees)."
+    },
+    {
+      "name": "longitude",
+      "kind": "GroupingOrMeasure",
+      "displayName": "Longitude",
+      "description": "WGS84 longitude (decimal degrees)."
+    },
+    {
+      "name": "facilityOwner",
+      "kind": "Grouping",
+      "displayName": "Station Facility Owner (colour)",
+      "description": "Colours station bubbles and drives the legend."
+    },
+    {
+      "name": "constituency",
+      "kind": "Grouping",
+      "displayName": "Constituency",
+      "description": "Constituency name. Values must match the GeoJSON name property (PCON24NM) so clicking a polygon filters the report."
+    },
+    {
+      "name": "details",
+      "kind": "Grouping",
+      "displayName": "Tooltip details",
+      "description": "Text attributes shown in the station tooltip (e.g. CRS, MP_Name, Mainline, District, County)."
+    },
+    {
+      "name": "inRadius",
+      "kind": "Measure",
+      "displayName": "In radius flag",
+      "description": "e.g. [In_Radius]. Stations where this is 0/blank/false are hidden (toggle in Stations card)."
+    },
+    {
+      "name": "radiusLat",
+      "kind": "Measure",
+      "displayName": "Radius centre latitude",
+      "description": "e.g. [Sel_Lat]. Draws the radial-search circle."
+    },
+    {
+      "name": "radiusLon",
+      "kind": "Measure",
+      "displayName": "Radius centre longitude",
+      "description": "e.g. [Sel_Lon]."
+    },
+    {
+      "name": "radiusMiles",
+      "kind": "Measure",
+      "displayName": "Radius (miles)",
+      "description": "e.g. [Radius_mi Value]."
+    },
+    {
+      "name": "tooltips",
+      "kind": "Measure",
+      "displayName": "Tooltip measures",
+      "description": "Extra measures for the tooltip, e.g. a CONCATENATEX of serving operators."
+    }
+  ],
+  "dataViewMappings": [
+    {
+      "conditions": [
+        {
+          "station": {
+            "max": 1
+          },
+          "latitude": {
+            "max": 1
+          },
+          "longitude": {
+            "max": 1
+          },
+          "facilityOwner": {
+            "max": 1
+          },
+          "constituency": {
+            "max": 1
+          },
+          "inRadius": {
+            "max": 1
+          },
+          "radiusLat": {
+            "max": 1
+          },
+          "radiusLon": {
+            "max": 1
+          },
+          "radiusMiles": {
+            "max": 1
+          }
+        }
+      ],
+      "categorical": {
+        "categories": {
+          "select": [
+            {
+              "bind": {
+                "to": "station"
+              }
+            },
+            {
+              "bind": {
+                "to": "latitude"
+              }
+            },
+            {
+              "bind": {
+                "to": "longitude"
+              }
+            },
+            {
+              "bind": {
+                "to": "facilityOwner"
+              }
+            },
+            {
+              "bind": {
+                "to": "constituency"
+              }
+            },
+            {
+              "bind": {
+                "to": "details"
+              }
+            }
+          ],
+          "dataReductionAlgorithm": {
+            "top": {
+              "count": 30000
+            }
+          }
+        },
+        "values": {
+          "select": [
+            {
+              "bind": {
+                "to": "latitude"
+              }
+            },
+            {
+              "bind": {
+                "to": "longitude"
+              }
+            },
+            {
+              "bind": {
+                "to": "inRadius"
+              }
+            },
+            {
+              "bind": {
+                "to": "radiusLat"
+              }
+            },
+            {
+              "bind": {
+                "to": "radiusLon"
+              }
+            },
+            {
+              "bind": {
+                "to": "radiusMiles"
+              }
+            },
+            {
+              "bind": {
+                "to": "tooltips"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "objects": {
+    "general": {
+      "properties": {
+        "filter": {
+          "type": {
+            "filter": true
+          }
+        }
+      }
+    },
+    "baseMap": {
+      "properties": {
+        "style": {
+          "type": {
+            "enumeration": [
+              {
+                "value": "blank",
+                "displayName": "Blank (offline, no roads)"
+              },
+              {
+                "value": "positron",
+                "displayName": "Light – OpenFreeMap Positron"
+              },
+              {
+                "value": "dark",
+                "displayName": "Dark – OpenFreeMap Dark"
+              },
+              {
+                "value": "liberty",
+                "displayName": "Detailed – OpenFreeMap Liberty"
+              },
+              {
+                "value": "custom",
+                "displayName": "Custom style URL"
+              }
+            ]
+          }
+        },
+        "customUrl": {
+          "type": {
+            "text": true
+          }
+        },
+        "hideRoads": {
+          "type": {
+            "bool": true
+          }
+        },
+        "hideLabels": {
+          "type": {
+            "bool": true
+          }
+        },
+        "background": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "constituencies": {
+      "properties": {
+        "show": {
+          "type": {
+            "bool": true
+          }
+        },
+        "nameProperty": {
+          "type": {
+            "text": true
+          }
+        },
+        "useGeoJsonColours": {
+          "type": {
+            "bool": true
+          }
+        },
+        "defaultColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "fillOpacity": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "strokeWidth": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "strokeOpacity": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "tooltipProperties": {
+          "type": {
+            "text": true
+          }
+        }
+      }
+    },
+    "constituencyLabels": {
+      "properties": {
+        "show": {
+          "type": {
+            "bool": true
+          }
+        },
+        "fontSize": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "colour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "haloColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "minZoom": {
+          "type": {
+            "numeric": true
+          }
+        }
+      }
+    },
+    "railLines": {
+      "properties": {
+        "show": {
+          "type": {
+            "bool": true
+          }
+        },
+        "mainlineColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "mainlineWidth": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "branchColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "branchWidth": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "dashBranches": {
+          "type": {
+            "bool": true
+          }
+        }
+      }
+    },
+    "stations": {
+      "properties": {
+        "show": {
+          "type": {
+            "bool": true
+          }
+        },
+        "radius": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "opacity": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "defaultColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "strokeColour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "strokeWidth": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "colourOverrides": {
+          "type": {
+            "text": true
+          }
+        },
+        "onlyInRadius": {
+          "type": {
+            "bool": true
+          }
+        },
+        "showLabels": {
+          "type": {
+            "bool": true
+          }
+        },
+        "labelMinZoom": {
+          "type": {
+            "numeric": true
+          }
+        }
+      }
+    },
+    "legend": {
+      "properties": {
+        "show": {
+          "type": {
+            "bool": true
+          }
+        },
+        "position": {
+          "type": {
+            "enumeration": [
+              {
+                "value": "top-left",
+                "displayName": "Top left"
+              },
+              {
+                "value": "top-right",
+                "displayName": "Top right"
+              },
+              {
+                "value": "bottom-left",
+                "displayName": "Bottom left"
+              },
+              {
+                "value": "bottom-right",
+                "displayName": "Bottom right"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "zoom": {
+      "properties": {
+        "autoZoom": {
+          "type": {
+            "bool": true
+          }
+        },
+        "padding": {
+          "type": {
+            "numeric": true
+          }
+        },
+        "maxZoom": {
+          "type": {
+            "numeric": true
+          }
+        }
+      }
+    },
+    "radiusCircle": {
+      "properties": {
+        "show": {
+          "type": {
+            "bool": true
+          }
+        },
+        "colour": {
+          "type": {
+            "fill": {
+              "solid": {
+                "color": true
+              }
+            }
+          }
+        },
+        "fillOpacity": {
+          "type": {
+            "numeric": true
+          }
+        }
+      }
+    }
+  },
+  "tooltips": {
+    "supportedTypes": {
+      "default": true,
+      "canvas": true
+    },
+    "roles": [
+      "tooltips"
+    ],
+    "supportEnhancedTooltips": true
+  },
+  "supportsHighlight": true,
+  "supportsMultiVisualSelection": true,
+  "supportsEmptyDataView": true,
+  "supportsLandingPage": false,
+  "privileges": [
+    {
+      "name": "WebAccess",
+      "essential": false,
+      "parameters": [
+        "https://tiles.openfreemap.org"
+      ]
+    }
+  ]
+}
