@@ -1,0 +1,287 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "PCON24NM": "Sample North West",
+    "Party": "Sample party 1",
+    "fill": "#E4003B",
+    "fill-opacity": 0.25,
+    "stroke": "#E4003B",
+    "stroke-width": 1
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -2.1,
+       52.55
+      ],
+      [
+       -1.8,
+       52.55
+      ],
+      [
+       -1.8,
+       52.75
+      ],
+      [
+       -2.1,
+       52.75
+      ],
+      [
+       -2.1,
+       52.55
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "PCON24NM": "Sample North",
+    "Party": "Sample party 2",
+    "fill": "#0087DC",
+    "fill-opacity": 0.25,
+    "stroke": "#0087DC",
+    "stroke-width": 1
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.8,
+       52.55
+      ],
+      [
+       -1.5,
+       52.55
+      ],
+      [
+       -1.5,
+       52.75
+      ],
+      [
+       -1.8,
+       52.75
+      ],
+      [
+       -1.8,
+       52.55
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "PCON24NM": "Sample North East",
+    "Party": "Sample party 3",
+    "fill": "#FAA61A",
+    "fill-opacity": 0.25,
+    "stroke": "#FAA61A",
+    "stroke-width": 1
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.5,
+       52.55
+      ],
+      [
+       -1.2,
+       52.55
+      ],
+      [
+       -1.2,
+       52.75
+      ],
+      [
+       -1.5,
+       52.75
+      ],
+      [
+       -1.5,
+       52.55
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "PCON24NM": "Sample South West",
+    "Party": "Sample party 1",
+    "fill": "#12B6CF",
+    "fill-opacity": 0.25,
+    "stroke": "#12B6CF",
+    "stroke-width": 1
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -2.1,
+       52.35
+      ],
+      [
+       -1.8,
+       52.35
+      ],
+      [
+       -1.8,
+       52.550000000000004
+      ],
+      [
+       -2.1,
+       52.550000000000004
+      ],
+      [
+       -2.1,
+       52.35
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "PCON24NM": "Sample South",
+    "Party": "Sample party 2",
+    "fill": "#6AB023",
+    "fill-opacity": 0.25,
+    "stroke": "#6AB023",
+    "stroke-width": 1
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.8,
+       52.35
+      ],
+      [
+       -1.5,
+       52.35
+      ],
+      [
+       -1.5,
+       52.550000000000004
+      ],
+      [
+       -1.8,
+       52.550000000000004
+      ],
+      [
+       -1.8,
+       52.35
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "PCON24NM": "Sample South East",
+    "Party": "Sample party 3",
+    "fill": "#E4003B",
+    "fill-opacity": 0.25,
+    "stroke": "#E4003B",
+    "stroke-width": 1
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.5,
+       52.35
+      ],
+      [
+       -1.2,
+       52.35
+      ],
+      [
+       -1.2,
+       52.550000000000004
+      ],
+      [
+       -1.5,
+       52.550000000000004
+      ],
+      [
+       -1.5,
+       52.35
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Sample Main Line",
+    "stroke": "#333333",
+    "stroke-width": 3
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -2.15,
+      52.4
+     ],
+     [
+      -1.9,
+      52.48
+     ],
+     [
+      -1.65,
+      52.47
+     ],
+     [
+      -1.25,
+      52.62
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "Sample Branch Line",
+    "stroke": "#8A8F98",
+    "stroke-width": 1.4
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -1.9,
+      52.48
+     ],
+     [
+      -1.85,
+      52.6
+     ],
+     [
+      -1.75,
+      52.72
+     ]
+    ]
+   }
+  }
+ ]
+}

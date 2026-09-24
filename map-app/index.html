@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DFTO Rail Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <style>
+    html, body { margin: 0; height: 100%; font-family: "Segoe UI", Arial, sans-serif; }
+    #map { position: absolute; inset: 0; background: #F4F4F2; }
+    .panel {
+      position: absolute; z-index: 2; padding: 6px 10px; border-radius: 4px;
+      background: rgba(255, 255, 255, 0.95); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      font-size: 12px; color: #333;
+    }
+    #basemap { top: 10px; left: 10px; display: flex; flex-direction: column; gap: 4px; }
+    #status { left: 10px; bottom: 30px; max-width: 70%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="basemap" class="panel">
+    <label>Base map
+      <select id="basemap-select">
+        <option value="positron">OpenFreeMap Positron (grayscale)</option>
+        <option value="osm-pale">OpenStreetMap (pale fallback)</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="place-names" checked> Place names</label>
+  </div>
+  <div id="status" class="panel">Loading base map…</div>
+
+  <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script>
+    // ================================================================ step 1: clean grayscale base map
+    //
+    // Base map: OpenFreeMap "positron" vector style — free, no API key, no token. Loaded directly by MapLibre, then
+    // made minimal (Azure Maps "Grayscale Light" look) by HIDING the busy layers: roads, rail, buildings, POIs,
+    // land use, house numbers, small place names. Positron's own pale colours are kept as-is.
+    // Fallback (only if OpenFreeMap can't be reached): OpenStreetMap raster tiles, desaturated and lightened. No key.
+
+    const POSITRON_URL = "https://tiles.openfreemap.org/styles/positron";
+
+    const OSM_PALE_STYLE = {
+      version: 8,
+      sources: {
+        osm: {
+          type: "raster",
+          tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          maxzoom: 19,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }
+      },
+      layers: [
+        { id: "background", type: "background", paint: { "background-color": "#F4F4F2" } },
+        {
+          id: "osm", type: "raster", source: "osm",
+          paint: { "raster-saturation": -1, "raster-contrast": -0.35, "raster-brightness-min": 0.45, "raster-opacity": 0.85 }
+        }
+      ]
+    };
+
+    // Positron layers are grouped by OpenMapTiles source-layer. Only these stay visible.
+    const KEEP_SOURCE_LAYERS = new Set(["water", "waterway", "boundary", "place", "landcover"]);
+    const KEEP_PLACE = /(country|state|city|town|capital)/i;   // drop village / suburb / hamlet names
+
+    const status = document.getElementById("status");
+    const basemapSelect = document.getElementById("basemap-select");
+    const placeNames = document.getElementById("place-names");
+    let basemapNote = "";
+
+    const map = new maplibregl.Map({
+      container: "map",
+      style: POSITRON_URL,
+      center: [-1.5, 52.5],   // Midlands: lon, lat
+      zoom: 8,
+      attributionControl: { compact: true },
+      dragRotate: false,
+      pitchWithRotate: false
+    });
+    map.touchZoomRotate.disableRotation();
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-right");
+
+    function isPlaceLayer(layer) {
+      return layer["source-layer"] === "place";
+    }
+
+    /** Hides everything on Positron except water, faint land cover, boundaries and major place names. */
+    function makeMinimal() {
+      for (const layer of map.getStyle().layers) {
+        if (layer.type === "background") continue;
+        const sourceLayer = layer["source-layer"];
+        let visible = KEEP_SOURCE_LAYERS.has(sourceLayer);
+        if (isPlaceLayer(layer)) visible = KEEP_PLACE.test(layer.id) && placeNames.checked;
+        if (sourceLayer === "waterway" && layer.type === "symbol") visible = false;   // river names
+        try {
+          map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+        } catch (err) {
+          console.warn("Could not update layer", layer.id, err);
+        }
+      }
+    }
+
+    map.on("style.load", () => {
+      const onPositron = basemapSelect.value === "positron";
+      if (onPositron) makeMinimal();
+      placeNames.disabled = !onPositron;
+      showStatus();
+    });
+
+    // OpenFreeMap unreachable (offline, blocked network): switch to the pale OSM fallback and say why.
+    map.on("error", (e) => {
+      const message = String(e.error?.message ?? e.error ?? "");
+      console.warn("Map error:", message);
+      if (basemapSelect.value === "positron" && !map.isStyleLoaded()) {
+        basemapNote = `OpenFreeMap could not be loaded (${message.slice(0, 80)}) – using the OpenStreetMap fallback.`;
+        basemapSelect.value = "osm-pale";
+        setTimeout(() => map.setStyle(OSM_PALE_STYLE, { diff: false }), 0);
+      }
+    });
+
+    basemapSelect.addEventListener("change", () => {
+      basemapNote = "";
+      map.setStyle(basemapSelect.value === "positron" ? POSITRON_URL : OSM_PALE_STYLE, { diff: false });
+    });
+    placeNames.addEventListener("change", () => {
+      if (basemapSelect.value === "positron") makeMinimal();
+    });
+
+    function showStatus() {
+      const c = map.getCenter();
+      const source = basemapSelect.value === "positron" ? "OpenFreeMap Positron" : "OpenStreetMap (pale)";
+      status.textContent = `${basemapNote ? basemapNote + " · " : ""}${source} · centre ${c.lat.toFixed(3)}, ${c.lng.toFixed(3)} · zoom ${map.getZoom().toFixed(2)}`;
+    }
+    map.on("moveend", showStatus);
+
+    window.dftoMap = map; // for debugging in the browser console
+  </script>
+</body>
+</html>

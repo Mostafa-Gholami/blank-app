@@ -1,0 +1,36 @@
+{
+  "name": "dfto-maplibre-map",
+  "description": "DFTO TOC Mapping Platform – MapLibre GL custom visual for Power BI",
+  "version": "1.1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mostafa-gholami/blank-app"
+  },
+  "license": "MIT",
+  "scripts": {
+    "pbiviz": "pbiviz",
+    "start": "pbiviz start",
+    "package": "pbiviz package",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepare-geojson": "node scripts/prepare-geojson.mjs",
+    "build-glyphs": "node scripts/build-glyphs.mjs",
+    "test:render": "node test/render-test.mjs"
+  },
+  "dependencies": {
+    "maplibre-gl": "5.24.0",
+    "polylabel": "2.1.0",
+    "powerbi-visuals-api": "5.11.1",
+    "powerbi-visuals-utils-formattingmodel": "6.0.4"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "eslint": "^9.11.1",
+    "eslint-plugin-powerbi-visuals": "^1.0.0",
+    "playwright-core": "^1.56.1",
+    "powerbi-models": "^2.1.1",
+    "powerbi-visuals-tools": "^7.2.1",
+    "typescript": "5.5.4"
+  },
+  "private": true
+}

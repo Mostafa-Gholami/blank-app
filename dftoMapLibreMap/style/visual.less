@@ -1,0 +1,125 @@
+@import (less) "maplibre-gl/dist/maplibre-gl.css";
+
+.dfto-map-visual {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: "Segoe UI", "wf_segoe-ui_normal", "Helvetica Neue", Arial, sans-serif;
+
+    .dfto-map {
+        position: absolute;
+        inset: 0;
+    }
+
+    .dfto-legend {
+        position: absolute;
+        z-index: 2;
+        max-width: 45%;
+        max-height: 60%;
+        overflow-y: auto;
+        padding: 6px 8px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        font-size: 11px;
+        color: #252423;
+        pointer-events: auto;
+
+        &.dfto-top-left { top: 8px; left: 8px; }
+        &.dfto-top-right { top: 8px; right: 48px; }
+        &.dfto-bottom-left { bottom: 24px; left: 8px; }
+        &.dfto-bottom-right { bottom: 24px; right: 8px; }
+    }
+
+    .dfto-legend-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .dfto-legend-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        line-height: 16px;
+        white-space: nowrap;
+    }
+
+    .dfto-legend-swatch {
+        flex: 0 0 auto;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+    }
+
+    .dfto-legend-more {
+        margin-top: 2px;
+        color: #605e5c;
+    }
+
+    .dfto-notice {
+        position: absolute;
+        z-index: 2;
+        left: 50%;
+        bottom: 8px;
+        transform: translateX(-50%);
+        max-width: 80%;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: rgba(50, 49, 48, 0.85);
+        color: #ffffff;
+        font-size: 11px;
+        text-align: center;
+    }
+}
+
+.dfto-map-visual {
+    .dfto-legend-section + .dfto-legend-section {
+        margin-top: 6px;
+    }
+
+    .dfto-legend-line {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 0;
+    }
+
+    .dfto-layer-panel {
+        position: absolute;
+        z-index: 2;
+        left: 8px;
+        bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 6px 8px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        font-size: 11px;
+        color: #252423;
+    }
+
+    .dfto-layer-panel.dfto-panel-top {
+        top: 8px;
+        bottom: auto;
+    }
+
+    .dfto-layer-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        white-space: nowrap;
+
+        input {
+            margin: 0;
+        }
+
+        &.dfto-disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+}
