@@ -14,6 +14,6 @@ python -m http.server 8000
 
 ## Status
 
-1. ✅ Real base map: OpenFreeMap Light by default, with OpenFreeMap Detailed and OpenStreetMap raster in the drop-down. It falls back to OSM tiles if the vector style can't be fetched. Centred on the Midlands (52.5, −1.5, zoom 8).
+1. ✅ Clean grayscale base map, like Azure Maps' *Grayscale Light*. OpenFreeMap's Positron vector style is restyled in the page: near-white land, soft blue-grey water, faint dashed boundaries and small grey city/town names, with no roads, rail, buildings, parks or POIs. A *Place names* checkbox hides the names. If the vector style can't be fetched, it uses CARTO `light_nolabels` raster tiles, which have the same pale look and no labels. Both are free and need no key. Centred on the Midlands (52.5, −1.5, zoom 8).
 2. ⏳ Waiting for `combined_layers.geojson` (constituency polygons + rail lines), to be placed in this folder.
 3.–8. Labels, rail layers, stations, toggles, radial search and tooltips come after the data files arrive.
