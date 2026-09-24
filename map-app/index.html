@@ -14,7 +14,7 @@
       font-size: 12px; color: #333;
     }
     #basemap { top: 10px; left: 10px; display: flex; flex-direction: column; gap: 4px; }
-    #status { left: 10px; bottom: 30px; }
+    #status { left: 10px; bottom: 30px; max-width: 70%; }
   </style>
 </head>
 <body>
@@ -22,8 +22,8 @@
   <div id="basemap" class="panel">
     <label>Base map
       <select id="basemap-select">
-        <option value="grayscale">Grayscale (vector)</option>
-        <option value="grayscale-raster">Grayscale (raster)</option>
+        <option value="positron">OpenFreeMap Positron (grayscale)</option>
+        <option value="osm-pale">OpenStreetMap (pale fallback)</option>
       </select>
     </label>
     <label><input type="checkbox" id="place-names" checked> Place names</label>
@@ -34,102 +34,46 @@
   <script>
     // ================================================================ step 1: clean grayscale base map
     //
-    // Default: OpenFreeMap's Positron vector style (free, no key), restyled into an Azure-Maps-"Grayscale Light"-like
-    // canvas: pale land, soft water, faint boundaries, a few grey place names; roads, buildings, POIs and rail removed.
-    // Fallback: CARTO "light_nolabels" raster tiles (free, no key) — equally pale, no labels at all.
+    // Base map: OpenFreeMap "positron" vector style — free, no API key, no token. Loaded directly by MapLibre, then
+    // made minimal (Azure Maps "Grayscale Light" look) by HIDING the busy layers: roads, rail, buildings, POIs,
+    // land use, house numbers, small place names. Positron's own pale colours are kept as-is.
+    // Fallback (only if OpenFreeMap can't be reached): OpenStreetMap raster tiles, desaturated and lightened. No key.
 
-    const PALETTE = {
-      land: "#F4F4F2",
-      water: "#DCE3EA",
-      waterLine: "#CBD5DF",
-      boundary: "#C4C4C4",
-      label: "#8C8C8C",
-      labelHalo: "#F4F4F2"
-    };
+    const POSITRON_URL = "https://tiles.openfreemap.org/styles/positron";
 
-    const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
-
-    const RASTER_STYLE = {
+    const OSM_PALE_STYLE = {
       version: 8,
       sources: {
-        carto: {
+        osm: {
           type: "raster",
-          tiles: ["a", "b", "c", "d"].map(s => `https://${s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png`),
+          tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
           tileSize: 256,
-          maxzoom: 20,
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>'
+          maxzoom: 19,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }
       },
       layers: [
-        { id: "background", type: "background", paint: { "background-color": PALETTE.land } },
-        { id: "carto", type: "raster", source: "carto" }
+        { id: "background", type: "background", paint: { "background-color": "#F4F4F2" } },
+        {
+          id: "osm", type: "raster", source: "osm",
+          paint: { "raster-saturation": -1, "raster-contrast": -0.35, "raster-brightness-min": 0.45, "raster-opacity": 0.85 }
+        }
       ]
     };
 
-    // OpenMapTiles source-layers kept on the canvas; everything else (transportation, building, poi, aeroway,
-    // housenumber, park, landuse, mountain_peak, …) is dropped.
-    const KEEP_SOURCE_LAYERS = new Set(["water", "waterway", "boundary", "place"]);
-    const LABEL_CLASSES = ["city", "town"];
-
-    /** Turns the fetched Positron style into the minimal grayscale canvas. */
-    function toGrayscale(style) {
-      const layers = [];
-      for (const layer of style.layers) {
-        const sourceLayer = layer["source-layer"];
-        if (layer.type === "background") {
-          layers.push({ ...layer, paint: { "background-color": PALETTE.land } });
-          continue;
-        }
-        if (!KEEP_SOURCE_LAYERS.has(sourceLayer)) continue;
-
-        if (sourceLayer === "water" && layer.type === "fill") {
-          layers.push({ ...layer, paint: { "fill-color": PALETTE.water, "fill-antialias": true } });
-        } else if (sourceLayer === "waterway" && layer.type === "line") {
-          layers.push({ ...layer, minzoom: Math.max(layer.minzoom ?? 0, 9), paint: { "line-color": PALETTE.waterLine, "line-width": 0.8 } });
-        } else if (sourceLayer === "boundary" && layer.type === "line") {
-          layers.push({ ...layer, paint: { "line-color": PALETTE.boundary, "line-width": 0.8, "line-dasharray": [3, 2] } });
-        } else if (sourceLayer === "place" && layer.type === "symbol") {
-          layers.push({
-            ...layer,
-            filter: ["in", ["get", "class"], ["literal", LABEL_CLASSES]],
-            layout: { ...layer.layout, "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 12, 13], "icon-image": "" },
-            paint: { "text-color": PALETTE.label, "text-halo-color": PALETTE.labelHalo, "text-halo-width": 1.2 }
-          });
-        }
-      }
-      return { ...style, layers };
-    }
+    // Positron layers are grouped by OpenMapTiles source-layer. Only these stay visible.
+    const KEEP_SOURCE_LAYERS = new Set(["water", "waterway", "boundary", "place", "landcover"]);
+    const KEEP_PLACE = /(country|state|city|town|capital)/i;   // drop village / suburb / hamlet names
 
     const status = document.getElementById("status");
     const basemapSelect = document.getElementById("basemap-select");
     const placeNames = document.getElementById("place-names");
-
-    let grayscaleStyle = null;   // restyled vector style, fetched once
-
-    async function loadGrayscaleStyle() {
-      if (!grayscaleStyle) {
-        const response = await fetch(VECTOR_STYLE_URL);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        grayscaleStyle = toGrayscale(await response.json());
-      }
-      return grayscaleStyle;
-    }
-
-    async function initialStyle() {
-      try {
-        return await loadGrayscaleStyle();
-      } catch (err) {
-        // Vector style unreachable (blocked network, offline): use the raster grayscale tiles instead.
-        console.warn("Vector base map unavailable, using raster grayscale:", err.message);
-        basemapSelect.value = "grayscale-raster";
-        return RASTER_STYLE;
-      }
-    }
+    let basemapNote = "";
 
     const map = new maplibregl.Map({
       container: "map",
-      style: { version: 8, sources: {}, layers: [{ id: "background", type: "background", paint: { "background-color": PALETTE.land } }] },
-      center: [-1.5, 52.5],          // Midlands: lon, lat
+      style: POSITRON_URL,
+      center: [-1.5, 52.5],   // Midlands: lon, lat
       zoom: 8,
       attributionControl: { compact: true },
       dragRotate: false,
@@ -138,43 +82,59 @@
     map.touchZoomRotate.disableRotation();
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-right");
-    initialStyle().then(style => map.setStyle(style, { diff: false }));
 
-    async function setBasemap(kind) {
-      if (kind === "grayscale") {
+    function isPlaceLayer(layer) {
+      return layer["source-layer"] === "place";
+    }
+
+    /** Hides everything on Positron except water, faint land cover, boundaries and major place names. */
+    function makeMinimal() {
+      for (const layer of map.getStyle().layers) {
+        if (layer.type === "background") continue;
+        const sourceLayer = layer["source-layer"];
+        let visible = KEEP_SOURCE_LAYERS.has(sourceLayer);
+        if (isPlaceLayer(layer)) visible = KEEP_PLACE.test(layer.id) && placeNames.checked;
+        if (sourceLayer === "waterway" && layer.type === "symbol") visible = false;   // river names
         try {
-          map.setStyle(await loadGrayscaleStyle(), { diff: false });
-          return;
+          map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
         } catch (err) {
-          console.warn("Vector base map unavailable:", err.message);
-          basemapSelect.value = "grayscale-raster";
+          console.warn("Could not update layer", layer.id, err);
         }
       }
-      map.setStyle(RASTER_STYLE, { diff: false });
     }
 
     map.on("style.load", () => {
-      applyPlaceNames();
-      placeNames.disabled = basemapSelect.value !== "grayscale";
+      const onPositron = basemapSelect.value === "positron";
+      if (onPositron) makeMinimal();
+      placeNames.disabled = !onPositron;
+      showStatus();
     });
 
-    function applyPlaceNames() {
-      for (const layer of map.getStyle().layers) {
-        if (layer["source-layer"] === "place") {
-          map.setLayoutProperty(layer.id, "visibility", placeNames.checked ? "visible" : "none");
-        }
+    // OpenFreeMap unreachable (offline, blocked network): switch to the pale OSM fallback and say why.
+    map.on("error", (e) => {
+      const message = String(e.error?.message ?? e.error ?? "");
+      console.warn("Map error:", message);
+      if (basemapSelect.value === "positron" && !map.isStyleLoaded()) {
+        basemapNote = `OpenFreeMap could not be loaded (${message.slice(0, 80)}) – using the OpenStreetMap fallback.`;
+        basemapSelect.value = "osm-pale";
+        setTimeout(() => map.setStyle(OSM_PALE_STYLE, { diff: false }), 0);
       }
-    }
+    });
 
-    basemapSelect.addEventListener("change", () => setBasemap(basemapSelect.value));
-    placeNames.addEventListener("change", applyPlaceNames);
+    basemapSelect.addEventListener("change", () => {
+      basemapNote = "";
+      map.setStyle(basemapSelect.value === "positron" ? POSITRON_URL : OSM_PALE_STYLE, { diff: false });
+    });
+    placeNames.addEventListener("change", () => {
+      if (basemapSelect.value === "positron") makeMinimal();
+    });
 
-    const showView = () => {
+    function showStatus() {
       const c = map.getCenter();
-      status.textContent = `Centre ${c.lat.toFixed(3)}, ${c.lng.toFixed(3)} · zoom ${map.getZoom().toFixed(2)}`;
-    };
-    map.on("load", showView);
-    map.on("moveend", showView);
+      const source = basemapSelect.value === "positron" ? "OpenFreeMap Positron" : "OpenStreetMap (pale)";
+      status.textContent = `${basemapNote ? basemapNote + " · " : ""}${source} · centre ${c.lat.toFixed(3)}, ${c.lng.toFixed(3)} · zoom ${map.getZoom().toFixed(2)}`;
+    }
+    map.on("moveend", showStatus);
 
     window.dftoMap = map; // for debugging in the browser console
   </script>

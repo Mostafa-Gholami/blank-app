@@ -14,6 +14,6 @@ python -m http.server 8000
 
 ## Status
 
-1. ✅ Clean grayscale base map, like Azure Maps' *Grayscale Light*. OpenFreeMap's Positron vector style is restyled in the page: near-white land, soft blue-grey water, faint dashed boundaries and small grey city/town names, with no roads, rail, buildings, parks or POIs. A *Place names* checkbox hides the names. If the vector style can't be fetched, it uses CARTO `light_nolabels` raster tiles, which have the same pale look and no labels. Both are free and need no key. Centred on the Midlands (52.5, −1.5, zoom 8).
+1. ✅ Clean grayscale base map from OpenFreeMap **Positron** (`https://tiles.openfreemap.org/styles/positron`). It is free and needs no API key or token. MapLibre loads the style directly, then the page hides roads, rail, buildings, parks, land use, POIs and village/suburb names, and keeps Positron's own pale colours. A *Place names* checkbox hides the remaining city/town names. If OpenFreeMap can't be reached, the page switches to desaturated, lightened OpenStreetMap raster tiles (no key) and says why in the status bar. Centred on the Midlands (52.5, −1.5, zoom 8).
 2. ⏳ Waiting for `combined_layers.geojson` (constituency polygons + rail lines), to be placed in this folder.
 3.–8. Labels, rail layers, stations, toggles, radial search and tooltips come after the data files arrive.
