@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DFTO Rail Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <style>
+    html, body { margin: 0; height: 100%; font-family: "Segoe UI", Arial, sans-serif; }
+    #map { position: absolute; inset: 0; }
+    #status {
+      position: absolute; left: 10px; bottom: 30px; z-index: 2;
+      padding: 4px 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); font-size: 12px; color: #333;
+    }
+    #basemap {
+      position: absolute; top: 10px; left: 10px; z-index: 2;
+      padding: 6px 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <label id="basemap">Base map
+    <select id="basemap-select">
+      <option value="positron">OpenFreeMap – Light</option>
+      <option value="liberty">OpenFreeMap – Detailed</option>
+      <option value="osm">OpenStreetMap (raster)</option>
+    </select>
+  </label>
+  <div id="status">Loading base map…</div>
+
+  <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script>
+    // ---------------------------------------------------------------- step 1: real base map
+    const BASEMAPS = {
+      positron: "https://tiles.openfreemap.org/styles/positron",
+      liberty: "https://tiles.openfreemap.org/styles/liberty",
+      osm: {
+        version: 8,
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            maxzoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }
+        },
+        layers: [{ id: "osm", type: "raster", source: "osm" }]
+      }
+    };
+
+    const status = document.getElementById("status");
+    const map = new maplibregl.Map({
+      container: "map",
+      style: BASEMAPS.positron,
+      center: [-1.5, 52.5],   // Midlands: lon, lat
+      zoom: 8,
+      attributionControl: { compact: false }
+    });
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.addControl(new maplibregl.ScaleControl({ unit: "imperial" }), "bottom-right");
+
+    const showView = () => {
+      const c = map.getCenter();
+      status.textContent = `Centre ${c.lat.toFixed(3)}, ${c.lng.toFixed(3)} · zoom ${map.getZoom().toFixed(2)}`;
+    };
+    map.on("load", showView);
+    map.on("moveend", showView);
+
+    // If a vector style can't be fetched (blocked network), fall back to OSM raster tiles.
+    let fellBack = false;
+    map.on("error", (e) => {
+      console.warn("Map error:", e.error?.message);
+      if (!map.isStyleLoaded() && !fellBack) {
+        fellBack = true;
+        status.textContent = "Vector base map unavailable – switching to OpenStreetMap tiles";
+        document.getElementById("basemap-select").value = "osm";
+        setTimeout(() => map.setStyle(BASEMAPS.osm), 0);
+      }
+    });
+
+    document.getElementById("basemap-select").addEventListener("change", (e) => {
+      map.setStyle(BASEMAPS[e.target.value]);
+    });
+
+    window.dftoMap = map; // handy for debugging in the browser console
+  </script>
+</body>
+</html>
